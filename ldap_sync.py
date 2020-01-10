@@ -5,7 +5,6 @@ import logging
 from yaml import safe_load
 from airflow.www_rbac.app import cached_appbuilder
 
-#logging.basicConfig(filename='/var/log/airflow_ldap_sync.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 f_handler = logging.FileHandler('/var/log/airflow_ldap_sync.log')
 f_format = logging.Formatter('%(asctime)s - %(message)s')
