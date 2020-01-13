@@ -4,6 +4,6 @@ group_object_class: 'Group'
 group_name_attr: 'cn'
 group_member_attr: 'member'
 group_search_filter: '(cn=airflow*)'
-group_map:
+group_role_map:
     'airflow_admins': 'Admin'
     'airflow_users': 'User'
