@@ -82,7 +82,7 @@ for group in ldap_sync_config['group_role_map']:
                 if user:
                     logger.info('User {} created'.format(user.username))
             else:
-                logger.info('AD user {} not found'.format(username))
+                logger.warning('AD user {} not found'.format(username))
 
 
 ab_user_list = appbuilder.sm.get_all_users()
