@@ -12,9 +12,9 @@ f_handler.setFormatter(f_format)
 logger.addHandler(f_handler)
 logger.info('Starting airflow ldap sync')
 
-group_map_file = os.path.join(os.environ['AIRFLOW_HOME'], 'ldap_sync.yaml')
-with open(group_map_file) as f:
-    group_map = safe_load(f)
+ldap_sync_conf_file = os.path.join(os.environ['AIRFLOW_HOME'], 'ldap_sync.yaml')
+with open(ldap_sync_conf_file) as f:
+    ldap_sync_config = safe_load(f)
 
 appbuilder = cached_appbuilder()
 con = ldap.initialize(appbuilder.sm.auth_ldap_server)
@@ -22,26 +22,34 @@ con.set_option(ldap.OPT_REFERRALS, 0)
 appbuilder.sm._bind_indirect_user(ldap, con)
 
 
-for group in group_map:
+for group in ldap_sync_config['group_map']:
     filter_str = \
-                "(&(ObjectClass=Group)(cn=%s))" % (
+                "(&(ObjectClass=%s)(%s=%s))" % (
+                    ldap_sync_config['group_object_class'],
+                    ldap_sync_config['group_name_attr'],
                     group
                 )
     group_cn = con.search_s(
             appbuilder.sm.auth_ldap_search,
             ldap.SCOPE_SUBTREE,
             filter_str,
-            ['cn']
+            [
+                ldap_sync_config['group_name_attr']
+            ]
         )[0][0]
     filter_str = \
-                "(&(ObjectClass=User)(memberOf=%s))" % (
+                "(&(ObjectClass=%s)(%s=%s))" % (
+                    ldap_sync_config['user_object_class'],
+                    ldap_sync_config['user_group_name_attr'],
                     group_cn
                 )
     users = con.search_s(
             appbuilder.sm.auth_ldap_search,
             ldap.SCOPE_SUBTREE,
             filter_str,
-            [appbuilder.sm.auth_ldap_uid_field]
+            [
+                appbuilder.sm.auth_ldap_uid_field
+            ]
         )
     user_list = [sam_account_name.get(appbuilder.sm.auth_ldap_uid_field)[0].decode('utf-8') for sam_account_name in [user[1] for user in users]]
 
@@ -69,20 +77,21 @@ for group in group_map:
                         appbuilder.sm.auth_ldap_email_field,
                         username + '@email.notfound'
                     ),
-                    role=appbuilder.sm.find_role(group_map[group])
+                    role=appbuilder.sm.find_role(ldap_sync_config['group_map'][group])
                 )
                 if user:
                     logger.info('User {} created.'.format(user.username))
             else:
                 logger.info('AD user {} not found'.format(username))
-                
-                
+
+
 ab_user_list = appbuilder.sm.get_all_users()
 for user in ab_user_list:
     if appbuilder.sm._search_ldap(ldap, con, user.username):
         # Mapping additional roles:
         filter_str = \
-                    "(&(ObjectClass=User)(%s=%s))" % (
+                    "(&(ObjectClass=%s)(%s=%s))" % (
+                        ldap_sync_config['user_object_class'],
                         appbuilder.sm.auth_ldap_uid_field,
                         user.username
                     )
@@ -90,23 +99,30 @@ for user in ab_user_list:
                 appbuilder.sm.auth_ldap_search,
                 ldap.SCOPE_SUBTREE,
                 filter_str,
-                [appbuilder.sm.auth_ldap_uid_field]
+                [
+                    appbuilder.sm.auth_ldap_uid_field
+                ]
             )[0][0]
         filter_str = \
-                    "(&(ObjectClass=Group)(member=%s)(cn=airflow*))" % (
-                        user_cn
+                    "(&(ObjectClass=%s)(%s=%s)%s)" % (
+                        ldap_sync_config['group_object_class'],
+                        ldap_sync_config['group_member_attr'],
+                        user_cn,
+                        ldap_sync_config['group_search_filter']
                     )
         groups = con.search_s(
                 appbuilder.sm.auth_ldap_search,
                 ldap.SCOPE_SUBTREE,
                 filter_str,
-                ['cn']
+                [
+                    ldap_sync_config['group_name_attr']
+                ]
             )
         group_list = [cn.get('cn')[0].decode('utf-8') for cn in [group[1] for group in groups]]
         #roles = user.roles
         roles = []
         for group in group_list:
-            role = appbuilder.sm.find_role(group_map[group])
+            role = appbuilder.sm.find_role(ldap_sync_config['group_map'][group])
             if role:
                 roles.append(role)
         user.roles = roles
