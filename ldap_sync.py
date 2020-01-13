@@ -122,9 +122,8 @@ for user in ab_user_list:
         synced_roles = []
         for group in group_list:
             role = appbuilder.sm.find_role(ldap_sync_config['group_role_map'].get(group))
-            if role:
-                if role not in synced_roles:
-                    synced_roles.append(role)
+            if role and (role not in synced_roles):
+                synced_roles.append(role)
         if sorted(user.roles, key = lambda x: x.name) != sorted(synced_roles, key = lambda x: x.name):
             user.roles = synced_roles
             appbuilder.sm.update_user(user)
