@@ -25,35 +25,39 @@ appbuilder.sm._bind_indirect_user(ldap, con)
 
 
 for group in ldap_sync_config['group_role_map']:
-    filter_str = \
-                "(&(ObjectClass=%s)(%s=%s))" % (
-                    ldap_sync_config['group_object_class'],
-                    ldap_sync_config['group_name_attr'],
-                    group
-                )
-    group_cn = con.search_s(
-            appbuilder.sm.auth_ldap_search,
-            ldap.SCOPE_SUBTREE,
-            filter_str,
-            [
-                ldap_sync_config['group_name_attr']
-            ]
-        )[0][0]
-    filter_str = \
-                "(&(ObjectClass=%s)(%s=%s))" % (
-                    ldap_sync_config['user_object_class'],
-                    ldap_sync_config['user_group_name_attr'],
-                    group_cn
-                )
-    users = con.search_s(
-            appbuilder.sm.auth_ldap_search,
-            ldap.SCOPE_SUBTREE,
-            filter_str,
-            [
-                appbuilder.sm.auth_ldap_uid_field
-            ]
-        )
-    user_list = [sam_account_name.get(appbuilder.sm.auth_ldap_uid_field)[0].decode('utf-8') for sam_account_name in [user[1] for user in users]]
+    try:
+        filter_str = \
+                    "(&(ObjectClass=%s)(%s=%s))" % (
+                        ldap_sync_config['group_object_class'],
+                        ldap_sync_config['group_name_attr'],
+                        group
+                    )
+        group_cn = con.search_s(
+                appbuilder.sm.auth_ldap_search,
+                ldap.SCOPE_SUBTREE,
+                filter_str,
+                [
+                    ldap_sync_config['group_name_attr']
+                ]
+            )[0][0]
+    except IndexError:
+        logger.error('No such AD group {}'.format(group))
+    else:
+        filter_str = \
+                    "(&(ObjectClass=%s)(%s=%s))" % (
+                        ldap_sync_config['user_object_class'],
+                        ldap_sync_config['user_group_name_attr'],
+                        group_cn
+                    )
+        users = con.search_s(
+                appbuilder.sm.auth_ldap_search,
+                ldap.SCOPE_SUBTREE,
+                filter_str,
+                [
+                    appbuilder.sm.auth_ldap_uid_field
+                ]
+            )
+        user_list = [sam_account_name.get(appbuilder.sm.auth_ldap_uid_field)[0].decode('utf-8') for sam_account_name in [user[1] for user in users]]
 
     # Adding new users:
     for username in user_list:
@@ -90,7 +94,7 @@ for group in ldap_sync_config['group_role_map']:
 ab_user_list = appbuilder.sm.get_all_users()
 for user in ab_user_list:
     if appbuilder.sm._search_ldap(ldap, con, user.username):
-        # Mapping additional roles:
+        # Mapping roles:
         filter_str = \
                     "(&(ObjectClass=%s)(%s=%s))" % (
                         ldap_sync_config['user_object_class'],
@@ -124,8 +128,11 @@ for user in ab_user_list:
         synced_roles = []    # type: List[Any]
         for group in group_list:
             role = appbuilder.sm.find_role(ldap_sync_config['group_role_map'].get(group))
-            if role and (role not in synced_roles):
-                synced_roles.append(role)
+            if role:
+                if role not in synced_roles:
+                    synced_roles.append(role)
+            elif ldap_sync_config['group_role_map'].get(group):
+                logger.error('Role {} for AD group {} not found in airflow'.format(ldap_sync_config['group_role_map'].get(group), group))
         if sorted(user.roles, key = lambda x: x.name) != sorted(synced_roles, key = lambda x: x.name):
             user.roles = synced_roles
             appbuilder.sm.update_user(user)
