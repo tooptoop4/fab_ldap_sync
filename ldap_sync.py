@@ -118,7 +118,7 @@ for user in ab_user_list:
                     ldap_sync_config['group_name_attr']
                 ]
             )
-        group_list = [cn.get('cn')[0].decode('utf-8') for cn in [group[1] for group in groups]]
+        group_list = [cn.get(ldap_sync_config['group_name_attr'])[0].decode('utf-8') for cn in [group[1] for group in groups]]
         #roles = user.roles
         roles = []
         for group in group_list:
