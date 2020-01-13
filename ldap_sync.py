@@ -80,7 +80,7 @@ for group in ldap_sync_config['group_role_map']:
                     role=appbuilder.sm.find_role(ldap_sync_config['group_role_map'][group])
                 )
                 if user:
-                    logger.info('User {} created.'.format(user.username))
+                    logger.info('User {} created'.format(user.username))
             else:
                 logger.info('AD user {} not found'.format(username))
 
@@ -119,14 +119,18 @@ for user in ab_user_list:
                 ]
             )
         group_list = [cn.get(ldap_sync_config['group_name_attr'])[0].decode('utf-8') for cn in [group[1] for group in groups]]
-        #roles = user.roles
-        roles = []
+        synced_roles = []
+        user.roles.sort(key = lambda x: x.name)
+        synced_roles.sort(key = lambda x: x.name)
         for group in group_list:
             role = appbuilder.sm.find_role(ldap_sync_config['group_role_map'][group])
             if role:
-                roles.append(role)
-        user.roles = roles
-        appbuilder.sm.update_user(user)
+                synced_roles.append(role)
+
+        if not user.roles == synced_roles:
+            user.roles = synced_roles
+            appbuilder.sm.update_user(user)
+            logger.info('Roles for user {} updated: {}'.format(user.username, user.roles))
 
     else:
         # Deleting fired users:
