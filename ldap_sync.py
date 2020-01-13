@@ -139,3 +139,4 @@ for user in ab_user_list:
             logger.info('User {} deleted.'.format(username))
 
 logger.info('Finished airflow ldap sync')
+logger.info('')
