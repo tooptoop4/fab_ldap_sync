@@ -4,6 +4,8 @@ import ldap
 import logging
 from yaml import safe_load
 from airflow.www_rbac.app import cached_appbuilder
+from typing import List, Any
+
 
 logger = logging.getLogger(__name__)
 f_handler = logging.FileHandler('/var/log/airflow_ldap_sync.log')
@@ -119,7 +121,7 @@ for user in ab_user_list:
                 ]
             )
         group_list = [cn.get(ldap_sync_config['group_name_attr'])[0].decode('utf-8') for cn in [group[1] for group in groups]]
-        synced_roles = []
+        synced_roles = []    # type: List[Any]
         for group in group_list:
             role = appbuilder.sm.find_role(ldap_sync_config['group_role_map'].get(group))
             if role and (role not in synced_roles):
