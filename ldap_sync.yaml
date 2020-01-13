@@ -1,2 +1,9 @@
-'airflow_admins': 'Admin'
-'airflow_users': 'User'
+user_object_class: 'User'
+user_group_name_attr: 'memberOf'
+group_object_class: 'Group'
+group_name_attr: 'cn'
+group_member_attr: 'member'
+group_search_filter: '(cn=airflow*)'
+group_map:
+    'airflow_admins': 'Admin'
+    'airflow_users': 'User'
