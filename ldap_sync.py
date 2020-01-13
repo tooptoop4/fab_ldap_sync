@@ -22,7 +22,7 @@ con.set_option(ldap.OPT_REFERRALS, 0)
 appbuilder.sm._bind_indirect_user(ldap, con)
 
 
-for group in ldap_sync_config['group_map']:
+for group in ldap_sync_config['group_role_map']:
     filter_str = \
                 "(&(ObjectClass=%s)(%s=%s))" % (
                     ldap_sync_config['group_object_class'],
@@ -77,7 +77,7 @@ for group in ldap_sync_config['group_map']:
                         appbuilder.sm.auth_ldap_email_field,
                         username + '@email.notfound'
                     ),
-                    role=appbuilder.sm.find_role(ldap_sync_config['group_map'][group])
+                    role=appbuilder.sm.find_role(ldap_sync_config['group_role_map'][group])
                 )
                 if user:
                     logger.info('User {} created.'.format(user.username))
@@ -122,7 +122,7 @@ for user in ab_user_list:
         #roles = user.roles
         roles = []
         for group in group_list:
-            role = appbuilder.sm.find_role(ldap_sync_config['group_map'][group])
+            role = appbuilder.sm.find_role(ldap_sync_config['group_role_map'][group])
             if role:
                 roles.append(role)
         user.roles = roles
